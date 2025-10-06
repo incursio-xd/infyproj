@@ -1092,63 +1092,7 @@
             </div>
         </div>
     </div>
-    <div class="control-card">
-        <div class="control-title">
-            <i class="fas fa-draw-polygon"></i> Zone Controls
-        </div>
-        <div class="input-group" id="zoneNameGroup1" style="display: none;">
-            <label for="zoneNameInput1">Zone Name:</label>
-            <input type="text" id="zoneNameInput1" placeholder="Enter zone name">
-            <label for="zoneCapacityInput1" style="margin-top: 1rem;">Zone Capacity Limit:</label>
-            <input type="number" id="zoneCapacityInput1" placeholder="Enter maximum capacity" min="1" value="10">
-            <label for="zoneWarningInput1" style="margin-top: 1rem;">Warning Threshold:</label>
-            <input type="number" id="zoneWarningInput1" placeholder="Warning at this count" min="1" value="8">
-            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                <button class="btn btn-success btn-small" onclick="saveCurrentZone(1)">
-                    <i class="fas fa-save"></i> Save Zone
-                </button>
-                <button class="btn btn-small" onclick="cancelCurrentZone(1)">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-        <div id="zoneInstructions1">
-            <p style="opacity: 0.8; font-size: 0.9rem;">
-                1. Start the camera<br>
-                2. Click "Draw Zone"<br>
-                3. Click points to create zone boundary<br>
-                4. Double-click to finish drawing<br>
-                5. Enter zone name and capacity limits<br>
-                6. Save the zone<br>
-                7. Start YOLO processing
-            </p>
-        </div>
 
-        <!-- NEW: Live Count Display for Camera 2 -->
-        <div class="control-card">
-            <div class="control-title">
-                <i class="fas fa-users"></i> Live Count
-            </div>
-            <div class="zone-counts-container">
-                <div class="total-count-display">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 10px;">
-                        <span style="font-weight: 600; font-size: 1.1rem;">Total People:</span>
-                        <span id="totalCount2" style="font-size: 1.3rem; font-weight: 700; color: #4ecdc4;">0</span>
-                    </div>
-                </div>
-                <div id="zoneStats2" style="font-size: 0.95rem;">
-                    <p style="opacity: 0.7; text-align: center; font-style: italic;">Start YOLO processing to see live
-                        counts</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-    </div>
-    </div>
-
-    <!-- Camera 2 Modal (Recorded) -->
     <!-- Camera 2 Modal (Recorded) -->
     <div id="camera2Modal" class="camera-modal">
         <div class="camera-modal-content">

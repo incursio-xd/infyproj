@@ -86,7 +86,7 @@
         .dashboard-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            grid-template-rows: auto auto auto;
+            grid-template-rows: auto auto;
             gap: 1.5rem;
             padding: 2rem;
             min-height: calc(100vh - 80px);
@@ -101,7 +101,10 @@
             padding: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
+
 
         .occupancy-panel {
             grid-column: 2;
@@ -111,6 +114,8 @@
             border-radius: 20px;
             padding: 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            max-height: 350px;
+            overflow-y: auto;
         }
 
         .heatmap-container {
@@ -124,8 +129,8 @@
         }
 
         .alerts-panel {
-            grid-column: 1 / 3;
-            grid-row: 3;
+            grid-column: 1;
+            grid-row: 2;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
             border-radius: 20px;
@@ -520,6 +525,7 @@
                 </button>
             </div>
 
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="totalPeople">0</div>
@@ -538,7 +544,15 @@
                     <div class="stat-label">Capacity Usage</div>
                 </div>
             </div>
-
+            <div class="alerts-panel">
+                <div class="panel-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Live Alerts & Violations
+                </div>
+                <div class="alerts-container" id="alertsContainer">
+                    <div class="loading-message">No alerts yet</div>
+                </div>
+            </div>
             <div class="chart-canvas">
                 <canvas id="populationChart"></canvas>
             </div>
@@ -564,15 +578,6 @@
             </div>
         </div>
 
-        <div class="alerts-panel">
-            <div class="panel-title">
-                <i class="fas fa-exclamation-triangle"></i>
-                Live Alerts & Violations
-            </div>
-            <div class="alerts-container" id="alertsContainer">
-                <div class="loading-message">No alerts yet</div>
-            </div>
-        </div>
     </div>
 
     <script>
