@@ -1,500 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Crowd Analytics Dashboard</title>
     <script src="https://kit.fontawesome.com/64d58efce2.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: white;
-        }
-
-        .header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .header h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .live-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(76, 175, 80, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            border: 1px solid rgba(76, 175, 80, 0.5);
-        }
-
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: #4CAF50;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.7;
-                transform: scale(1.1);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            grid-template-rows: auto auto;
-            gap: 1.5rem;
-            padding: 2rem;
-            min-height: calc(100vh - 80px);
-        }
-
-        .chart-container {
-            grid-column: 1;
-            grid-row: 1 / 3;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-
-        .occupancy-panel {
-            grid-column: 2;
-            grid-row: 1;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-height: 350px;
-            overflow-y: auto;
-        }
-
-        .heatmap-container {
-            grid-column: 2;
-            grid-row: 2;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .alerts-panel {
-            grid-column: 1;
-            grid-row: 2;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-height: 300px;
-        }
-
-        .panel-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: white;
-        }
-
-        .zone-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            position: relative;
-        }
-
-        .zone-card.warning {
-            border-color: #FF9800;
-            background: rgba(255, 152, 0, 0.2);
-        }
-
-        .zone-card.danger {
-            border-color: #F44336;
-            background: rgba(244, 67, 54, 0.2);
-            animation: glow-danger 2s infinite alternate;
-        }
-
-        .zone-card.normal {
-            border-color: #4CAF50;
-            background: rgba(76, 175, 80, 0.1);
-        }
-
-        @keyframes glow-danger {
-            from {
-                box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
-            }
-
-            to {
-                box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
-            }
-        }
-
-        .zone-info {
-            flex: 1;
-        }
-
-        .zone-name {
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .zone-capacity {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .zone-count {
-            font-size: 2rem;
-            font-weight: 700;
-            text-align: center;
-        }
-
-        .capacity-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            margin-top: 0.5rem;
-            overflow: hidden;
-        }
-
-        .capacity-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: all 0.5s ease;
-        }
-
-        .capacity-fill.normal {
-            background: linear-gradient(90deg, #4CAF50, #8BC34A);
-        }
-
-        .capacity-fill.warning {
-            background: linear-gradient(90deg, #FF9800, #FFC107);
-        }
-
-        .capacity-fill.danger {
-            background: linear-gradient(90deg, #F44336, #FF5722);
-        }
-
-        .heatmap-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .activity-bubble {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .activity-bubble.high {
-            background: rgba(244, 67, 54, 0.3);
-            border: 2px solid #F44336;
-            transform: scale(1.1);
-        }
-
-        .activity-bubble.medium {
-            background: rgba(255, 152, 0, 0.3);
-            border: 2px solid #FF9800;
-        }
-
-        .activity-bubble.low {
-            background: rgba(76, 175, 80, 0.3);
-            border: 2px solid #4CAF50;
-            transform: scale(0.9);
-        }
-
-        .bubble-count {
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
-
-        .bubble-label {
-            font-size: 0.7rem;
-            text-align: center;
-            margin-top: 0.25rem;
-        }
-
-        .chart-canvas {
-            position: relative;
-            height: 400px;
-        }
-
-        .alert-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            margin-bottom: 0.5rem;
-            border-left: 4px solid;
-        }
-
-        .alert-item.warning {
-            border-left-color: #FF9800;
-        }
-
-        .alert-item.danger {
-            border-left-color: #F44336;
-        }
-
-        .alert-item.info {
-            border-left-color: #2196F3;
-        }
-
-        .alert-icon {
-            font-size: 1.5rem;
-        }
-
-        .alert-content {
-            flex: 1;
-        }
-
-        .alert-title {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .alert-time {
-            font-size: 0.8rem;
-            opacity: 0.7;
-        }
-
-        .controls-bar {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            align-items: center;
-        }
-
-        .time-selector {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .time-selector:hover,
-        .time-selector.active {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .refresh-btn {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            border: none;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .refresh-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .notification-toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(244, 67, 54, 0.95);
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .alerts-container {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .alerts-container::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .alerts-container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-
-        .alerts-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; }
+        
+        .header { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
+        .header h1 { font-size: 1.8rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+        
+        .camera-selector { display: flex; gap: 1rem; align-items: center; }
+        .camera-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.5rem 1rem; border-radius: 25px; cursor: pointer; transition: all 0.3s ease; }
+        .camera-btn.active { background: rgba(78, 205, 196, 0.3); border-color: #4ecdc4; }
+        .camera-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        
+        .status-indicator { display: flex; align-items: center; gap: 1rem; }
+        .live-status { display: flex; align-items: center; gap: 0.5rem; background: rgba(76, 175, 80, 0.2); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid rgba(76, 175, 80, 0.5); }
+        .live-dot { width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+        
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: auto auto; gap: 1.5rem; padding: 2rem; min-height: calc(100vh - 80px); }
+        
+        .chart-container { grid-column: 1; grid-row: 1 / 3; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 2rem; border: 1px solid rgba(255, 255, 255, 0.2); display: flex; flex-direction: column; }
+        .occupancy-panel { grid-column: 2; grid-row: 1; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.2); max-height: 350px; overflow-y: auto; }
+        .heatmap-container { grid-column: 2; grid-row: 2; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.2); }
+        
+        .panel-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; color: white; }
+        
+        .zone-card { background: rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; border: 2px solid transparent; }
+        .zone-card.warning { border-color: #FF9800; background: rgba(255, 152, 0, 0.2); }
+        .zone-card.danger { border-color: #F44336; background: rgba(244, 67, 54, 0.2); animation: glow-danger 2s infinite alternate; }
+        .zone-card.normal { border-color: #4CAF50; background: rgba(76, 175, 80, 0.1); }
+        @keyframes glow-danger { from { box-shadow: 0 0 10px rgba(244, 67, 54, 0.3); } to { box-shadow: 0 0 20px rgba(244, 67, 54, 0.6); } }
+        
+        .zone-info { flex: 1; }
+        .zone-name { font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .zone-capacity { font-size: 0.9rem; opacity: 0.8; }
+        .zone-count { font-size: 2rem; font-weight: 700; text-align: center; }
+        
+        .capacity-bar { width: 100%; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; margin-top: 0.5rem; overflow: hidden; }
+        .capacity-fill { height: 100%; border-radius: 4px; transition: all 0.5s ease; }
+        .capacity-fill.normal { background: linear-gradient(90deg, #4CAF50, #8BC34A); }
+        .capacity-fill.warning { background: linear-gradient(90deg, #FF9800, #FFC107); }
+        .capacity-fill.danger { background: linear-gradient(90deg, #F44336, #FF5722); }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 10px; text-align: center; }
+        .stat-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .stat-label { font-size: 0.9rem; opacity: 0.8; }
+        
+        .chart-canvas { position: relative; height: 400px; }
+        
+        .alerts-panel { position: fixed; bottom: 2rem; right: 2rem; max-width: 400px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-radius: 15px; padding: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.2); max-height: 300px; overflow-y: auto; z-index: 100; }
+        .alert-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 10px; margin-bottom: 0.5rem; border-left: 4px solid; }
+        .alert-item.warning { border-left-color: #FF9800; }
+        .alert-item.danger { border-left-color: #F44336; }
+        .alert-icon { font-size: 1.5rem; }
+        .alert-content { flex: 1; }
+        .alert-title { font-weight: 600; margin-bottom: 0.25rem; }
+        .alert-time { font-size: 0.8rem; opacity: 0.7; }
+        
+        .heatmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
+        .activity-bubble { background: rgba(255, 255, 255, 0.1); border-radius: 50%; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; transition: all 0.3s ease; cursor: pointer; }
+        .activity-bubble.high { background: rgba(244, 67, 54, 0.3); border: 2px solid #F44336; transform: scale(1.1); }
+        .activity-bubble.medium { background: rgba(255, 152, 0, 0.3); border: 2px solid #FF9800; }
+        .activity-bubble.low { background: rgba(76, 175, 80, 0.3); border: 2px solid #4CAF50; transform: scale(0.9); }
+        .bubble-count { font-size: 1.2rem; font-weight: 700; }
+        .bubble-label { font-size: 0.7rem; text-align: center; margin-top: 0.25rem; }
+        
+        .loading-message { text-align: center; opacity: 0.7; padding: 2rem; font-size: 1.1rem; }
+        .connection-status { font-size: 0.8rem; opacity: 0.7; }
+        .connection-status.connected { color: #4CAF50; }
+        .connection-status.disconnected { color: #F44336; }
+        
+        .notification-toast { position: fixed; top: 100px; right: 2rem; background: rgba(244, 67, 54, 0.95); color: white; padding: 1rem 1.5rem; border-radius: 10px; display: flex; align-items: center; gap: 1rem; z-index: 1001; animation: slideIn 0.3s ease; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .controls-bar { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+        .time-selector { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.5rem 1rem; border-radius: 25px; cursor: pointer; transition: all 0.3s ease; }
+        .time-selector:hover, .time-selector.active { background: rgba(255, 255, 255, 0.2); }
+        .refresh-btn { background: linear-gradient(135deg, #4CAF50, #45a049); border: none; color: white; padding: 0.5rem 1rem; border-radius: 25px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
+        .refresh-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3); }
+        
         @media (max-width: 1200px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto auto auto auto;
-            }
-
-            .chart-container {
-                grid-column: 1;
-                grid-row: 1;
-            }
-
-            .occupancy-panel {
-                grid-column: 1;
-                grid-row: 2;
-            }
-
-            .heatmap-container {
-                grid-column: 1;
-                grid-row: 3;
-            }
-
-            .alerts-panel {
-                grid-column: 1;
-                grid-row: 4;
-            }
-        }
-
-        .loading-message {
-            text-align: center;
-            opacity: 0.7;
-            padding: 2rem;
-            font-size: 1.1rem;
-        }
-
-        .connection-status {
-            font-size: 0.8rem;
-            opacity: 0.7;
-        }
-
-        .connection-status.connected {
-            color: #4CAF50;
-        }
-
-        .connection-status.disconnected {
-            color: #F44336;
+            .dashboard-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+            .chart-container { grid-column: 1; grid-row: 1; }
+            .occupancy-panel { grid-column: 1; grid-row: 2; }
+            .heatmap-container { grid-column: 1; grid-row: 3; }
         }
     </style>
 </head>
-
 <body>
     <div class="header">
         <h1><i class="fas fa-chart-line"></i> Live Crowd Analytics Dashboard</h1>
+        
+        <div class="camera-selector">
+            <button class="camera-btn active" data-camera="1" onclick="switchCamera(1)">
+                <i class="fas fa-video"></i> Camera 1 (Pi5)
+            </button>
+            <button class="camera-btn" data-camera="2" onclick="switchCamera(2)">
+                <i class="fas fa-video"></i> Camera 2 (Local)
+            </button>
+        </div>
+        
         <div class="status-indicator">
             <div class="live-status">
                 <div class="live-dot"></div>
@@ -513,7 +127,7 @@
         <div class="chart-container">
             <div class="panel-title">
                 <i class="fas fa-chart-area"></i>
-                Real-Time Population Analytics
+                <span id="chartTitle">Real-Time Population Analytics - Camera 1</span>
             </div>
 
             <div class="controls-bar">
@@ -524,7 +138,6 @@
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
             </div>
-
 
             <div class="stats-grid">
                 <div class="stat-card">
@@ -544,15 +157,7 @@
                     <div class="stat-label">Capacity Usage</div>
                 </div>
             </div>
-            <div class="alerts-panel">
-                <div class="panel-title">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Live Alerts & Violations
-                </div>
-                <div class="alerts-container" id="alertsContainer">
-                    <div class="loading-message">No alerts yet</div>
-                </div>
-            </div>
+
             <div class="chart-canvas">
                 <canvas id="populationChart"></canvas>
             </div>
@@ -577,42 +182,40 @@
                 <div class="loading-message">Waiting for activity data...</div>
             </div>
         </div>
+    </div>
 
+    <div class="alerts-panel" id="alertsPanel" style="display: none;">
+        <div class="panel-title">
+            <i class="fas fa-exclamation-triangle"></i>
+            Live Alerts
+        </div>
+        <div id="alertsContainer"></div>
     </div>
 
     <script>
-
         const API_BASE = window.location.origin + '/api';
-
-
+        
         let socket = null;
         let populationChart = null;
         let currentTimeRange = '1h';
         let lastUpdateTime = null;
         let zoneData = {};
-        let alertQueue = [];
-        let capacityViolations = new Set();
+        let currentCamera = 1;
         let isConnected = false;
-
-
-        const zoneColors = [
-            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
-            '#FECA57', '#FF9FF3', '#54A0FF', '#5F27CD'
-        ];
-
+        let recentAlerts = [];
+        let dataBufferByCamera = { 1: [], 2: [] };
+        
+        const zoneColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF', '#5F27CD'];
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('Initializing analytics dashboard...');
+            console.log('Initializing unified analytics dashboard...');
             initializeChart();
             initializeSocket();
             loadInitialData();
             setupEventListeners();
-
-
             setInterval(updateLastUpdateTime, 1000);
             setInterval(refreshData, 30000);
         });
-
 
         function initializeSocket() {
             try {
@@ -621,14 +224,6 @@
                 socket.on('connect', () => {
                     console.log('Connected to analytics server');
                     updateConnectionStatus(true);
-
-
-                    socket.emit('request_analytics_data', 1, (data) => {
-                        if (data && Array.isArray(data) && data.length > 0) {
-                            console.log('Received initial analytics data:', data);
-                            updateRealTimeData(data[0]);
-                        }
-                    });
                 });
 
                 socket.on('disconnect', () => {
@@ -641,33 +236,55 @@
                     updateConnectionStatus(false);
                 });
 
-
-                socket.on('live_analytics_data', (data) => {
-                    console.log('Received live analytics data:', data);
+                // UNIFIED DATA HANDLER - handles both Camera 1 (Pi5) and Camera 2 (Local)
+                socket.on('live_camera_data', (data) => {
+                    console.log('Received live_camera_data:', data);
                     if (data && typeof data === 'object') {
-                        updateRealTimeAnalyticsData(data);
+                        processLiveData(data);
                     }
                 });
 
+                // Pi5-specific processing data
+                socket.on('pi5_processing_data', (data) => {
+                    console.log('Received pi5_processing_data:', data);
+                    if (data && typeof data === 'object') {
+                        const normalizedData = {
+                            camera_id: data.camera_id || 1,
+                            total_count: data.total_count || 0,
+                            zone_counts: data.zone_counts || {},
+                            fps: data.fps || 0,
+                            timestamp: data.timestamp || new Date().toISOString(),
+                            device: data.device || 'Pi5'
+                        };
+                        processLiveData(normalizedData);
+                    }
+                });
+
+                // Analytics-specific data
+                socket.on('live_analytics_data', (data) => {
+                    console.log('Received live_analytics_data:', data);
+                    if (data && typeof data === 'object') {
+                        processAnalyticsData(data);
+                    }
+                });
+
+                // Capacity violations
+                socket.on('capacity_violation', (violation) => {
+                    console.log('Capacity violation received:', violation);
+                    handleCapacityViolation(violation);
+                });
 
                 socket.on('capacity_violation_alert', (violation) => {
                     console.log('Capacity violation alert received:', violation);
-                    if (violation && typeof violation === 'object') {
-                        handleCapacityViolation(violation);
-                    }
+                    handleCapacityViolation(violation);
                 });
 
-
-                socket.on('live_camera_data', (data) => {
-                    console.log('Received fallback live camera data:', data);
-                    if (data && typeof data === 'object') {
-                        updateRealTimeData(data);
-                    }
-                });
-
+                // Zones updated
                 socket.on('zones_updated', (data) => {
-                    console.log('Zones updated, refreshing data');
-                    loadZoneData();
+                    console.log('Zones updated:', data);
+                    if (data.camera_id === currentCamera || !data.camera_id) {
+                        loadZoneData();
+                    }
                 });
 
             } catch (error) {
@@ -676,16 +293,143 @@
             }
         }
 
-
-        function updateConnectionStatus(connected) {
-            isConnected = connected;
-            const statusElement = document.getElementById('connectionStatus');
-            if (statusElement) {
-                statusElement.textContent = connected ? 'Connected' : 'Disconnected';
-                statusElement.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+        function processLiveData(data) {
+            const cameraId = data.camera_id || 1;
+            
+            // CRITICAL FIX: Only process data for the currently selected camera
+            if (cameraId !== currentCamera) {
+                console.log(`[FILTER] Ignoring data for camera ${cameraId}, current camera is ${currentCamera}`);
+                return;
             }
+
+            console.log(`[CAMERA ${cameraId}] Processing live data:`, data);
+
+            // Update zone counts
+            if (data.zone_counts && typeof data.zone_counts === 'object') {
+                updateZonesFromData(data.zone_counts, cameraId);
+            }
+
+            // Update chart
+            if (data.total_count !== undefined && populationChart) {
+                const now = new Date(data.timestamp || Date.now());
+                const totalDataset = populationChart.data.datasets[0];
+
+                if (totalDataset) {
+                    totalDataset.data.push({
+                        x: now,
+                        y: Number(data.total_count) || 0
+                    });
+
+                    // Keep only last 100 data points
+                    if (totalDataset.data.length > 100) {
+                        totalDataset.data.shift();
+                    }
+
+                    populationChart.update('none');
+                }
+            }
+
+            // Update statistics
+            updateStatistics(data);
+            lastUpdateTime = new Date(data.timestamp || Date.now());
         }
 
+        function processAnalyticsData(data) {
+            const cameraId = data.camera_id || 1;
+            
+            // CRITICAL FIX: Only process data for the currently selected camera
+            if (cameraId !== currentCamera) {
+                console.log(`[FILTER] Ignoring analytics data for camera ${cameraId}, current camera is ${currentCamera}`);
+                return;
+            }
+
+            console.log(`[CAMERA ${cameraId}] Processing analytics data:`, data);
+
+            // Update zones from detailed analytics
+            if (data.zones && typeof data.zones === 'object') {
+                Object.entries(data.zones).forEach(([zoneName, zoneAnalytics]) => {
+                    let zone = Object.values(zoneData).find(z => z.name === zoneName);
+
+                    if (!zone) {
+                        const newId = Math.max(0, ...Object.keys(zoneData).map(k => parseInt(k))) + 1;
+                        zoneData[newId] = {
+                            id: newId,
+                            name: zoneName,
+                            capacity_limit: zoneAnalytics.capacity || 50,
+                            warning_threshold: zoneAnalytics.warning_threshold || 40,
+                            color: zoneColors[newId % zoneColors.length],
+                            currentCount: 0,
+                            status: 'normal'
+                        };
+                        zone = zoneData[newId];
+                    }
+
+                    zone.currentCount = zoneAnalytics.count || 0;
+                    zone.status = zoneAnalytics.status || 'normal';
+                    zone.capacity_limit = zoneAnalytics.capacity || zone.capacity_limit;
+                    zone.warning_threshold = zoneAnalytics.warning_threshold || zone.warning_threshold;
+                    zone.utilization = zoneAnalytics.utilization || 0;
+                });
+
+                updateZoneCards();
+                updateActivityHeatmap();
+            }
+
+            // Update chart
+            if (data.total_people !== undefined && populationChart) {
+                const now = new Date(data.timestamp);
+                const totalDataset = populationChart.data.datasets[0];
+
+                if (totalDataset) {
+                    totalDataset.data.push({
+                        x: now,
+                        y: Number(data.total_people) || 0
+                    });
+
+                    if (totalDataset.data.length > 100) {
+                        totalDataset.data.shift();
+                    }
+
+                    populationChart.update('none');
+                }
+            }
+
+            // Update statistics
+            if (data.summary) {
+                updateStatisticsFromAnalytics(data);
+            }
+
+            lastUpdateTime = new Date(data.timestamp || Date.now());
+        }
+
+        function updateZonesFromData(zoneCounts, cameraId) {
+            // Verify we're updating zones for the correct camera
+            if (cameraId && cameraId !== currentCamera) {
+                console.log(`[FILTER] Skipping zone update for camera ${cameraId}, current is ${currentCamera}`);
+                return;
+            }
+
+            Object.entries(zoneCounts).forEach(([zoneName, count]) => {
+                const zone = Object.values(zoneData).find(z => z.name === zoneName);
+
+                if (zone) {
+                    zone.currentCount = Number(count) || 0;
+
+                    const utilization = (zone.currentCount / (zone.capacity_limit || 50)) * 100;
+
+                    if (utilization >= 100) {
+                        zone.status = 'danger';
+                    } else if (utilization >= 80) {
+                        zone.status = 'warning';
+                    } else {
+                        zone.status = 'normal';
+                    }
+                }
+            });
+
+            updateZoneCards();
+            updateActivityHeatmap();
+        }
 
         function initializeChart() {
             try {
@@ -726,38 +470,19 @@
                                 type: 'time',
                                 time: {
                                     unit: 'minute',
-                                    displayFormats: {
-                                        minute: 'HH:mm'
-                                    }
+                                    displayFormats: { minute: 'HH:mm' }
                                 },
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: 'white',
-                                    font: { size: 11 }
-                                }
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: 'white', font: { size: 11 } }
                             },
                             y: {
                                 beginAtZero: true,
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.1)'
-                                },
-                                ticks: {
-                                    color: 'white',
-                                    font: { size: 11 },
-                                    stepSize: 5
-                                }
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: 'white', font: { size: 11 }, stepSize: 5 }
                             }
                         },
-                        animation: {
-                            duration: 750,
-                            easing: 'easeInOutCubic'
-                        },
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
-                        }
+                        animation: { duration: 750, easing: 'easeInOutCubic' },
+                        interaction: { intersect: false, mode: 'index' }
                     }
                 });
 
@@ -767,17 +492,13 @@
             }
         }
 
-
         async function loadInitialData() {
             try {
-                console.log('Loading initial data...');
-
+                console.log('Loading initial data for camera', currentCamera);
                 await Promise.all([
                     loadZoneData(),
-                    loadHistoricalData(),
-                    loadCurrentAlerts()
+                    loadHistoricalData()
                 ]);
-
                 updateLastUpdateTime();
                 console.log('Initial data loaded successfully');
             } catch (error) {
@@ -786,19 +507,16 @@
             }
         }
 
-
         async function loadZoneData() {
             try {
                 const token = localStorage.getItem('token') || 'demo-token';
-                const response = await fetch(`${API_BASE}/zones-with-capacity?camera_id=1`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                const response = await fetch(`${API_BASE}/zones?camera_id=${currentCamera}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const zones = await response.json();
-                    console.log('Loaded real zone data from API:', zones);
+                    console.log(`Loaded zones for camera ${currentCamera}:`, zones);
 
                     if (Array.isArray(zones) && zones.length > 0) {
                         zoneData = {};
@@ -814,15 +532,15 @@
 
                         updateZoneCards();
                         updateActivityHeatmap();
-                        console.log('Real zone data loaded successfully');
+                        console.log('Zone data loaded successfully');
                         return;
                     }
                 }
 
-                console.warn('No real zone data available, will wait for real-time updates');
-
-
+                console.warn('No zones available for camera', currentCamera);
                 zoneData = {};
+                updateZoneCards();
+                updateActivityHeatmap();
 
             } catch (error) {
                 console.error('Error loading zone data:', error);
@@ -830,29 +548,25 @@
             }
         }
 
-
         async function loadHistoricalData() {
             try {
                 const token = localStorage.getItem('token') || 'demo-token';
-                const response = await fetch(`${API_BASE}/analytics-data?range=${currentTimeRange}&camera_id=1`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                const response = await fetch(`${API_BASE}/analytics-data?range=${currentTimeRange}&camera_id=${currentCamera}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('Loaded real historical data:', data);
+                    console.log('Loaded historical data:', data);
 
                     if (data && Array.isArray(data.timeline) && data.timeline.length > 0) {
                         updatePopulationChart(data);
-                        console.log('Real historical data loaded successfully');
+                        console.log('Historical data loaded successfully');
                         return;
                     }
                 }
 
-                console.warn('No real historical data available, chart will be populated by real-time data');
-
+                console.warn('No historical data available');
                 initializeEmptyChart();
 
             } catch (error) {
@@ -861,61 +575,18 @@
             }
         }
 
-
-        async function loadCurrentAlerts() {
-            try {
-                const token = localStorage.getItem('token') || 'demo-token';
-                const response = await fetch(`${API_BASE}/capacity-violations?recent=true&camera_id=1`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (response.ok) {
-                    const alerts = await response.json();
-                    console.log('Loaded recent alerts:', alerts);
-
-                    if (Array.isArray(alerts) && alerts.length > 0) {
-                        updateAlertsPanel(alerts);
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading current alerts:', error);
-            }
-        }
-
-
         function initializeEmptyChart() {
-            if (!populationChart) {
-                console.warn('Chart not initialized, cannot create empty chart');
-                return;
-            }
-
-            const datasets = [{
-                label: 'Total People',
-                data: [],
-                borderColor: '#4ECDC4',
-                backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4
-            }];
-
-            populationChart.data.datasets = datasets;
+            if (!populationChart) return;
+            populationChart.data.datasets[0].data = [];
             populationChart.update('none');
             console.log('Empty chart initialized for real-time data');
         }
 
-
         function updatePopulationChart(data) {
-            if (!populationChart || !data || !data.timeline) {
-                console.warn('Chart or data not available');
-                return;
-            }
+            if (!populationChart || !data || !data.timeline) return;
 
             try {
-                const timeline = data.timeline;
-                const chartData = timeline.map(point => ({
+                const chartData = data.timeline.map(point => ({
                     x: new Date(point.timestamp),
                     y: point.total_count || 0
                 }));
@@ -928,205 +599,6 @@
                 console.error('Error updating population chart:', error);
             }
         }
-
-
-        function updateRealTimeData(data) {
-            try {
-                console.log('Updating real-time data:', data);
-
-                if (!data || typeof data !== 'object') {
-                    console.warn('Invalid data received');
-                    return;
-                }
-
-
-                if (data.zone_counts && typeof data.zone_counts === 'object') {
-                    Object.entries(data.zone_counts).forEach(([zoneName, count]) => {
-                        const zone = Object.values(zoneData).find(z =>
-                            z.name === zoneName || z.name === zoneName.replace('z', 'Zone ')
-                        );
-
-                        if (zone) {
-                            zone.currentCount = Number(count) || 0;
-
-
-                            const utilization = (zone.currentCount / (zone.capacity_limit || 50)) * 100;
-
-                            if (utilization >= 100) {
-                                zone.status = 'danger';
-                                if (!capacityViolations.has(zone.id)) {
-                                    capacityViolations.add(zone.id);
-                                    showCapacityAlert(zone, 'exceeded');
-                                }
-                            } else if (utilization >= 80) {
-                                zone.status = 'warning';
-                                if (!capacityViolations.has(zone.id)) {
-                                    showCapacityAlert(zone, 'warning');
-                                }
-                            } else {
-                                zone.status = 'normal';
-                                if (capacityViolations.has(zone.id)) {
-                                    capacityViolations.delete(zone.id);
-                                    showCapacityAlert(zone, 'resolved');
-                                }
-                            }
-                        }
-                    });
-
-                    updateZoneCards();
-                    updateActivityHeatmap();
-                }
-
-
-                if (data.total_count !== undefined && populationChart) {
-                    const now = new Date();
-                    const totalDataset = populationChart.data.datasets[0];
-
-                    if (totalDataset) {
-                        totalDataset.data.push({
-                            x: now,
-                            y: Number(data.total_count) || 0
-                        });
-
-
-                        if (totalDataset.data.length > 100) {
-                            totalDataset.data.shift();
-                        }
-
-                        populationChart.update('none');
-                    }
-                }
-
-
-                updateStatistics(data);
-                lastUpdateTime = new Date();
-
-            } catch (error) {
-                console.error('Error updating real-time data:', error);
-            }
-        }
-
-
-        function updateRealTimeAnalyticsData(data) {
-            try {
-                console.log('Processing real analytics data:', data);
-
-                if (!data || typeof data !== 'object') {
-                    console.warn('Invalid analytics data received');
-                    return;
-                }
-
-                lastUpdateTime = new Date(data.timestamp || Date.now());
-
-
-                if (data.zones && typeof data.zones === 'object') {
-                    Object.entries(data.zones).forEach(([zoneName, zoneAnalytics]) => {
-
-                        let zone = Object.values(zoneData).find(z => z.name === zoneName);
-
-                        if (!zone) {
-
-                            const newId = Math.max(0, ...Object.keys(zoneData).map(k => parseInt(k))) + 1;
-                            zoneData[newId] = {
-                                id: newId,
-                                name: zoneName,
-                                capacity_limit: zoneAnalytics.capacity || 50,
-                                warning_threshold: zoneAnalytics.warning_threshold || 40,
-                                color: zoneColors[newId % zoneColors.length],
-                                currentCount: 0,
-                                status: 'normal'
-                            };
-                            zone = zoneData[newId];
-                        }
-
-
-                        zone.currentCount = zoneAnalytics.count || 0;
-                        zone.status = zoneAnalytics.status || 'normal';
-                        zone.capacity_limit = zoneAnalytics.capacity || zone.capacity_limit;
-                        zone.warning_threshold = zoneAnalytics.warning_threshold || zone.warning_threshold;
-                        zone.utilization = zoneAnalytics.utilization || 0;
-                    });
-
-                    updateZoneCards();
-                    updateActivityHeatmap();
-                }
-
-
-                if (data.total_people !== undefined && populationChart) {
-                    const now = new Date(data.timestamp);
-                    const totalDataset = populationChart.data.datasets[0];
-
-                    if (totalDataset) {
-                        totalDataset.data.push({
-                            x: now,
-                            y: Number(data.total_people) || 0
-                        });
-
-
-                        if (totalDataset.data.length > 100) {
-                            totalDataset.data.shift();
-                        }
-
-                        populationChart.update('none');
-                    }
-                }
-
-
-                updateStatisticsFromAnalytics(data);
-
-            } catch (error) {
-                console.error('Error updating real-time analytics data:', error);
-            }
-        }
-
-
-        function updateStatistics(data) {
-            try {
-                const totalPeopleEl = document.getElementById('totalPeople');
-                const peakOccupancyEl = document.getElementById('peakOccupancy');
-                const avgOccupancyEl = document.getElementById('avgOccupancy');
-                const capacityUtilizationEl = document.getElementById('capacityUtilization');
-
-                if (totalPeopleEl) totalPeopleEl.textContent = data.total_count || 0;
-                if (peakOccupancyEl) peakOccupancyEl.textContent = data.total_count || 0;
-                if (avgOccupancyEl) avgOccupancyEl.textContent = data.total_count || 0;
-
-
-                const totalCapacity = Object.values(zoneData).reduce((sum, zone) => sum + (zone.capacity_limit || 50), 0);
-                const totalOccupancy = Object.values(zoneData).reduce((sum, zone) => sum + (zone.currentCount || 0), 0);
-                const overallUtilization = totalCapacity > 0 ? Math.round((totalOccupancy / totalCapacity) * 100) : 0;
-
-                if (capacityUtilizationEl) capacityUtilizationEl.textContent = `${overallUtilization}%`;
-
-            } catch (error) {
-                console.error('Error updating statistics:', error);
-            }
-        }
-
-
-        function updateStatisticsFromAnalytics(data) {
-            try {
-                const totalPeopleEl = document.getElementById('totalPeople');
-                const peakOccupancyEl = document.getElementById('peakOccupancy');
-                const avgOccupancyEl = document.getElementById('avgOccupancy');
-                const capacityUtilizationEl = document.getElementById('capacityUtilization');
-
-                if (totalPeopleEl) totalPeopleEl.textContent = data.total_people || 0;
-
-                if (data.summary) {
-                    if (peakOccupancyEl) peakOccupancyEl.textContent = data.total_people || 0;
-                    if (avgOccupancyEl) avgOccupancyEl.textContent = data.total_people || 0;
-                    if (capacityUtilizationEl) {
-                        const utilization = Math.round(data.summary.overall_utilization || 0);
-                        capacityUtilizationEl.textContent = `${utilization}%`;
-                    }
-                }
-
-            } catch (error) {
-                console.error('Error updating statistics from analytics:', error);
-            }
-        }
-
 
         function updateZoneCards() {
             const container = document.getElementById('zoneCards');
@@ -1162,7 +634,6 @@
             container.innerHTML = cards;
         }
 
-
         function updateActivityHeatmap() {
             const container = document.getElementById('heatmapGrid');
             if (!container) return;
@@ -1194,18 +665,67 @@
             container.innerHTML = bubbles || '<div class="loading-message">No activity data</div>';
         }
 
+        function updateStatistics(data) {
+            try {
+                const totalPeopleEl = document.getElementById('totalPeople');
+                const peakOccupancyEl = document.getElementById('peakOccupancy');
+                const avgOccupancyEl = document.getElementById('avgOccupancy');
+                const capacityUtilizationEl = document.getElementById('capacityUtilization');
+
+                if (totalPeopleEl) totalPeopleEl.textContent = data.total_count || 0;
+                if (peakOccupancyEl) peakOccupancyEl.textContent = data.total_count || 0;
+                if (avgOccupancyEl) avgOccupancyEl.textContent = data.total_count || 0;
+
+                const totalCapacity = Object.values(zoneData).reduce((sum, zone) => sum + (zone.capacity_limit || 50), 0);
+                const totalOccupancy = Object.values(zoneData).reduce((sum, zone) => sum + (zone.currentCount || 0), 0);
+                const overallUtilization = totalCapacity > 0 ? Math.round((totalOccupancy / totalCapacity) * 100) : 0;
+
+                if (capacityUtilizationEl) capacityUtilizationEl.textContent = `${overallUtilization}%`;
+
+            } catch (error) {
+                console.error('Error updating statistics:', error);
+            }
+        }
+
+        function updateStatisticsFromAnalytics(data) {
+            try {
+                const totalPeopleEl = document.getElementById('totalPeople');
+                const peakOccupancyEl = document.getElementById('peakOccupancy');
+                const avgOccupancyEl = document.getElementById('avgOccupancy');
+                const capacityUtilizationEl = document.getElementById('capacityUtilization');
+
+                if (totalPeopleEl) totalPeopleEl.textContent = data.total_people || 0;
+
+                if (data.summary) {
+                    if (peakOccupancyEl) peakOccupancyEl.textContent = data.total_people || 0;
+                    if (avgOccupancyEl) avgOccupancyEl.textContent = data.total_people || 0;
+                    if (capacityUtilizationEl) {
+                        const utilization = Math.round(data.summary.overall_utilization || 0);
+                        capacityUtilizationEl.textContent = `${utilization}%`;
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error updating statistics from analytics:', error);
+            }
+        }
 
         function handleCapacityViolation(violation) {
             console.log('Handling capacity violation:', violation);
 
+            const cameraId = violation.camera_id || 1;
+            
+            // Only show alerts for the currently selected camera
+            if (cameraId !== currentCamera) {
+                return;
+            }
 
             addAlert({
                 type: violation.violation_type === 'exceeded' ? 'danger' : 'warning',
                 title: `Zone ${violation.zone_name} ${violation.violation_type}`,
                 message: `${violation.people_count}/${violation.capacity_limit} people`,
-                timestamp: new Date(violation.timestamp)
+                timestamp: new Date(violation.timestamp || violation.violation_start)
             });
-
 
             showNotification(
                 `Zone ${violation.zone_name} capacity ${violation.violation_type}: ${violation.people_count}/${violation.capacity_limit}`,
@@ -1213,26 +733,12 @@
             );
         }
 
-
-        function showCapacityAlert(zone, type) {
-            const messages = {
-                'exceeded': `Zone ${zone.name} is over capacity!`,
-                'warning': `Zone ${zone.name} is approaching capacity`,
-                'resolved': `Zone ${zone.name} capacity issue resolved`
-            };
-
-            const alertType = type === 'exceeded' ? 'danger' : type === 'warning' ? 'warning' : 'info';
-            showNotification(messages[type], alertType);
-        }
-
-
         function addAlert(alert) {
+            const panel = document.getElementById('alertsPanel');
             const container = document.getElementById('alertsContainer');
             if (!container) return;
 
-
-            const loadingMsg = container.querySelector('.loading-message');
-            if (loadingMsg) loadingMsg.remove();
+            panel.style.display = 'block';
 
             const alertElement = document.createElement('div');
             alertElement.className = `alert-item ${alert.type}`;
@@ -1247,45 +753,18 @@
 
             container.insertBefore(alertElement, container.firstChild);
 
-
             const alerts = container.querySelectorAll('.alert-item');
             if (alerts.length > 10) {
                 alerts[alerts.length - 1].remove();
             }
-        }
 
-
-        function updateAlertsPanel(alerts) {
-            const container = document.getElementById('alertsContainer');
-            if (!container) return;
-
-            if (!alerts || alerts.length === 0) {
-                container.innerHTML = '<div class="loading-message">No recent alerts</div>';
-                return;
+            recentAlerts.push(alert);
+            if (recentAlerts.length > 50) {
+                recentAlerts.shift();
             }
-
-            const alertsHtml = alerts.map(alert => {
-                const timestamp = new Date(alert.violation_start || alert.timestamp);
-                const alertType = alert.violation_type === 'exceeded' ? 'danger' : 'warning';
-                const iconClass = alertType === 'danger' ? 'exclamation-circle' : 'exclamation-triangle';
-
-                return `
-                    <div class="alert-item ${alertType}">
-                        <i class="fas fa-${iconClass} alert-icon"></i>
-                        <div class="alert-content">
-                            <div class="alert-title">Zone ${alert.zone_name} ${alert.violation_type}</div>
-                            <div class="alert-time">${timestamp.toLocaleTimeString()} - ${alert.people_count}/${alert.capacity_limit} people</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            container.innerHTML = alertsHtml;
         }
-
 
         function showNotification(message, type = 'info') {
-
             const existingToast = document.querySelector('.notification-toast');
             if (existingToast) existingToast.remove();
 
@@ -1305,7 +784,6 @@
 
             document.body.appendChild(toast);
 
-
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.parentNode.removeChild(toast);
@@ -1313,6 +791,14 @@
             }, 5000);
         }
 
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            const statusElement = document.getElementById('connectionStatus');
+            if (statusElement) {
+                statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+                statusElement.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+            }
+        }
 
         function updateLastUpdateTime() {
             const element = document.getElementById('lastUpdate');
@@ -1321,9 +807,62 @@
             }
         }
 
+        function switchCamera(cameraId) {
+            console.log(`[SWITCH] Switching from camera ${currentCamera} to camera ${cameraId}`);
+            
+            // Store old camera ID for logging
+            const oldCamera = currentCamera;
+            currentCamera = cameraId;
+            
+            // Update UI
+            document.querySelectorAll('.camera-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.camera) === cameraId) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update chart title
+            const chartTitle = document.getElementById('chartTitle');
+            if (chartTitle) {
+                const cameraType = cameraId === 1 ? 'Pi5' : 'Local';
+                chartTitle.textContent = `Real-Time Population Analytics - Camera ${cameraId} (${cameraType})`;
+            }
+            
+            // CRITICAL: Reset all data for the new camera
+            console.log(`[SWITCH] Clearing data from camera ${oldCamera}`);
+            
+            // Clear zone data
+            Object.values(zoneData).forEach(zone => {
+                zone.currentCount = 0;
+                zone.status = 'normal';
+            });
+            
+            // Clear statistics
+            document.getElementById('totalPeople').textContent = '0';
+            document.getElementById('peakOccupancy').textContent = '0';
+            document.getElementById('avgOccupancy').textContent = '0';
+            document.getElementById('capacityUtilization').textContent = '0%';
+            
+            // Clear zones display
+            zoneData = {};
+            updateZoneCards();
+            updateActivityHeatmap();
+            
+            // Reset chart
+            if (populationChart) {
+                populationChart.data.datasets[0].data = [];
+                populationChart.update('none');
+            }
+            
+            // Load new camera data
+            console.log(`[SWITCH] Loading data for camera ${cameraId}`);
+            loadInitialData();
+            
+            showNotification(`Switched to Camera ${cameraId} - ${cameraId === 1 ? 'Pi5' : 'Local Video'}`, 'info');
+        }
 
         function setupEventListeners() {
-
             document.querySelectorAll('.time-selector').forEach(button => {
                 button.addEventListener('click', function () {
                     document.querySelectorAll('.time-selector').forEach(btn => btn.classList.remove('active'));
@@ -1334,12 +873,39 @@
             });
         }
 
-
         function refreshData() {
-            console.log('Refreshing dashboard data...');
+            console.log('[REFRESH] Refreshing dashboard data for camera', currentCamera);
             loadInitialData();
         }
+
+        // Debug helper - check what camera is active
+        window.checkCurrentCamera = function() {
+            console.log('=== CAMERA STATUS ===');
+            console.log('Current Camera:', currentCamera);
+            console.log('Zone Data:', zoneData);
+            console.log('Last Update:', lastUpdateTime);
+            console.log('====================');
+        };
+
+        // Log all incoming data for debugging
+        const originalConsoleLog = console.log;
+        window.enableDataLogging = function() {
+            console.log = function(...args) {
+                if (args[0] && typeof args[0] === 'string') {
+                    if (args[0].includes('Received') || args[0].includes('Processing')) {
+                        originalConsoleLog.apply(console, ['[DATA LOG]', ...args]);
+                        return;
+                    }
+                }
+                originalConsoleLog.apply(console, args);
+            };
+            console.log('[DEBUG] Data logging enabled. Use window.disableDataLogging() to disable.');
+        };
+
+        window.disableDataLogging = function() {
+            console.log = originalConsoleLog;
+            console.log('[DEBUG] Data logging disabled.');
+        };
     </script>
 </body>
-
 </html>
